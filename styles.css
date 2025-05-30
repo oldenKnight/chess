@@ -1,0 +1,98 @@
+html {
+   background-color: rgb(0, 0, 0);
+}
+
+#gameboard {
+   width: 750px; /**previously 810, before 640*/
+   height: 750px;
+   /*background-color: black;*/
+   display: flex;
+   flex-wrap: wrap;
+   margin: auto;  /* I want it in the center */
+}
+
+#turn {
+   color: rgb(255, 255, 255);
+}
+
+#preview {
+   color: rgb(255, 255, 255);
+}
+
+.intra {
+   height: 90px;
+   width: 90px;
+   position: relative;
+}
+
+.intra img {
+   position: relative;
+   z-index: -5;
+}
+
+/* there's no path to put behind the img (svg) */
+
+.piece {
+   position: relative;
+   z-index: 5; /* the piece is the one is in front */
+}
+
+.square {
+/*    margin: auto;*/
+   text-align: center;
+   /* display: block; */
+   
+}
+
+.boarder-left {
+   height: 90px;
+   width: 30px;
+   font-size: 30px;
+   color: rgb(82, 3, 3);
+}
+
+.boarder-down {
+   height: 30px;
+   width: 90px;
+   font-size: 30px;
+   color: rgb(82, 3, 3);
+}
+
+.boarder {
+   height: 30px;
+   width: 30px;
+}
+
+.boarder-top {
+   height: 90px;
+   width: 30px;
+}
+
+.boarder-down {
+   height: 30px;
+   width: 90px;
+}
+
+/* .square svg {
+
+} */
+
+.beige {
+   background-color: rgb(110, 110, 98);
+}
+
+.brown {
+   background-color: rgb(68, 29, 29);
+}
+
+.pink {
+   background-color: rgb(227, 71, 128);
+}
+
+.red {
+   background-color: rgb(168, 5, 5);
+}
+
+.white {
+   background-color: rgb(245, 245, 245);
+}

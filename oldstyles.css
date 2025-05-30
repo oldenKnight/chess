@@ -1,0 +1,54 @@
+html {
+   background-color: rgb(0, 0, 0);
+}
+
+#gameboard {
+   width: 810px; /**previously 640*/
+   height: 810px;
+   /*background-color: black;*/
+   display: flex;
+   flex-wrap: wrap;
+   margin: auto;  /* I want it in the center */
+}
+
+.piece {
+
+}
+
+.square {
+   height: 90px;
+   width: 90px;
+/*    margin: auto;*/
+   text-align: center;
+   /* display: block; */
+   
+}
+
+.boarder {
+   font-size: 30px;
+   color: rgb(82, 3, 3);
+}
+
+/* .square svg {
+
+} */
+
+.beige {
+   background-color: rgb(110, 110, 98);
+}
+
+.brown {
+   background-color: rgb(68, 29, 29);
+}
+
+.pink {
+   background-color: rgb(227, 71, 128);
+}
+
+.red {
+   background-color: rgb(168, 5, 5);
+}
+
+.white {
+   background-color: rgb(245, 245, 245);
+}
