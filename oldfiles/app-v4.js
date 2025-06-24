@@ -6,6 +6,7 @@ var gameboard = document.querySelector("#gameboard"), // the div
    showPlayer = document.querySelector("#player"), // whose turn it is
    extraInfo = document.querySelector("#info-display"), // the extra info to show below the player's name
    width = 8,
+   checkmated = false,
    players = {
       colors: ["white", "red"],
       colorNum: { white: 0, red: 1 },
@@ -17,6 +18,8 @@ var gameboard = document.querySelector("#gameboard"), // the div
       ],
       score: [ , ],
       kings: [ , ],
+      kcastle: [ true, true],
+      rcastle: { a1: true, h1: true, a8: true, h8: true},
       attacks: [{}, {}], // white and red
    },
    currentPlayer = WHITE, // 0 is white, 1 is black (red)
@@ -152,8 +155,12 @@ function playerSwitch() { // at the end of the turn, after dropping the piece, s
    flipIds();
    if (currentPlayer === WHITE) {
       currentPlayer++;
+      myColor = tango.color = "red";
+      opColor = "white";
    } else {
       currentPlayer = WHITE;
+      myColor = tango.color = "white";
+      opColor = "red";
    }
    showPlayer.textContent = players.colors[currentPlayer];
 }
@@ -183,12 +190,10 @@ function occide() { // eat piece checker
     * we can define this vars since we already checked if there's a piece there
     * and that the last move color is not current player color
     */
-   // isKingAttacked();
    var 
       myPiece = tango.piece.id,
       opponentsPieceColor = tango.endpiece.firstChild.id,
-      opponentsPiece = tango.endpiece.id,
-      legal = false;
+      opponentsPiece = tango.endpiece.id;
 
    checkDirection(players.colors[currentPlayer]);
    
@@ -201,41 +206,25 @@ function occide() { // eat piece checker
       mySquareId = Number(ubi(tango.origin).getAttribute("square-id"));
       opSquareId = Number(ubi(tango.end).getAttribute("square-id"));
 
-      // normal pawn capture, en passant has its own function
-      if (myPiece === pawn.s) {
-         if (pawnMove(true) === 0) { // true since there's a capture
-            legal = true;
+      // normal pawn capture, en passant has its own function ;; 1 --> special --> capture
+      let x = window[myPiece].move(tango.end, tango.origin, 1, opSquareId, tango.piece, tango.color, mySquareId);
+      if (x > 0) {
+         if (theConsole === ON) { // when using attackMap we want to show no console
+            console.log("Intended " + myPiece + " capture ilegal.");               
          }
-      } else if (myPiece === rook.s) {
-         if (rookMove() === 0) {
-            legal = true;
-         }
-      } else if (myPiece === knight.s) {
-         if (knightMove() === 0) {
-            legal = true;
-         }
-      } else if (myPiece === bishop.s) {
-         if (bishopMove(opSquareId) === 0) {
-            legal = true;
-         }
-      } else if (myPiece === queen.s) {
-         if (queenMove(opSquareId) === 0) {
-            legal = true;
-         }
-      } else if (myPiece === king.s) {
-         if (kingMove() === 0) {
-            legal = true;
-         }
-      }
+         return(1);
+      }      
       // We already checked that is a legal move
-      if (legal) {
-         successfulMove(myPiece, opSquareId, true, opponentsPiece);
-      }
+      successfulMove(myPiece, opSquareId, true, opponentsPiece);
    } 
 }
 
-function successfulMove(myPiece, quidSquareId, capture, opponentsPiece) {
+function successfulMove(myPiece, quidSquareId, capture, opponentsPiece, finis, initium, mate) {
    capture = capture || false;
+   finis = finis || tango.end;
+   initium = initium || tango.origin;
+   mate = mate || false;
+   opponentsPiece = opponentsPiece || "";
    var action = " to ", x = "", firstL = myPiece[0];
    if (myPiece === "knight") {
       firstL = "n" + tango.origin;
@@ -246,13 +235,14 @@ function successfulMove(myPiece, quidSquareId, capture, opponentsPiece) {
    }
 
    // we cannot ignore a check!
-   if (isAttacked(window[myPiece], tango.end, tango.origin, myColor) !== 0) {
+   if (isAttacked(window[myPiece], finis, initium, myColor) !== 0) {
          if (theConsole === ON) {
             console.log("You need to deal with the check!");
          }
          return(1);
+   } else if (mate) {
+      return(0);
    }
-
    if (capture) {
       // the actual capture
       tango.endintra1.append(tango.piece);
@@ -292,8 +282,8 @@ function successfulMove(myPiece, quidSquareId, capture, opponentsPiece) {
       lastMove.turn++;    
    }
 
-   // change player turn
-   playerSwitch(); 
+   playerSwitch(); // change player turn
+   checkmate();
 }
 
 function pawnMove(capture, finis, initium, myColor, imagine, iGpsPlenum, iGpsVacuum) {
@@ -343,7 +333,7 @@ function pawnMove(capture, finis, initium, myColor, imagine, iGpsPlenum, iGpsVac
       // if (c/3 === b/2-1) or (c/1 === b/2+1)
       if (capture && (columns.n[finis[COLUMN]] === columns.n[initium[COLUMN]] - 1 
          || columns.n[finis[COLUMN]] === columns.n[initium[COLUMN]] + 1)) {
-         return(exitCode); // capture
+         return(exitCode); // successful capture
       }
    } else if (Number(finis[ROW]) === Number(initium[ROW]) + (yUp * 2) 
       && Number(initium[ROW]) === myPawnOrigin) { // and I start from the beginning 
@@ -356,6 +346,25 @@ function pawnMove(capture, finis, initium, myColor, imagine, iGpsPlenum, iGpsVac
       }
       return(exitCode); // we can't move such a move
    }
+
+   // capture safety
+   if (capture) {
+         exitCode = 7;
+         if (theConsole === ON) { // when using attackMap we want to show no console
+            console.log("Exit code: " + exitCode + ".\nUnsuccesful capture.");
+         }
+         return(exitCode);
+   }
+
+   // imagine safety
+   if (imagine) { // if there was no capture we should exit
+      // if imagine is true, we shouldn't map advance moves
+      exitCode = 8;
+      if (theConsole === ON) { // when using attackMap we want to show no console
+         console.log("Exit code: " + exitCode + ".\nImagine mode on. Pawn move. We are only looking for captures");
+      }
+      return (exitCode);
+   } 
 
    // eat or advance?
    if (lastMove.end[COLUMN] === finis[COLUMN] // avoid en passant behaviour from other columns
@@ -375,24 +384,16 @@ function pawnMove(capture, finis, initium, myColor, imagine, iGpsPlenum, iGpsVac
 
    if (!enPassant) {
       if (!advanceOne) { // if I want to move two squares and no one blockades
-         if (imagine && surroundingGps.u === iGpsPlenum) { 
-            // iGpsPlenum will always be full
-            exitCode = 6;
-            if (theConsole === ON) { // when using attackMap we want to show no console
-               console.log("Exit code: " + exitCode + ".\nA piece is in between.");
-            }
-            return (exitCode);
-         } else if (surroundingGps.u === iGpsVacuum && imagine) { 
-            1; // iGpsVacuum will always be empty
-         } else if (ubi(surroundingGps.u).firstChild) { // a string ;; also equal to tango.origin[COLUMN] + midRow
+         if (ubi(surroundingGps.u).firstChild) { // a string ;; also equal to tango.origin[COLUMN] + midRow
                exitCode = 4;
                if (theConsole === ON) { // when using attackMap we want to show no console
                   console.log("Exit code: " + exitCode + ".\nA piece is in between.");
                }
                return (exitCode);
          }
-      } // else if we want to move one square in range, we have already checked that it is empty
+      } // else we want to move one square in range, we have already checked that it is empty
       return(exitCode); // 0
+
    } else if (lastMove.piece === pawn.s
       && Number(lastMove.end[ROW]) === opMiddle 
       && Number(lastMove.origin[ROW]) === opPawnOrigin
@@ -632,10 +633,11 @@ function queenMove(quidSquareId, finis, initium, piecediv, myColor, squareId, im
    return (rookMove(finis, initium, piecediv, myColor, imagine, iGpsPlenum, iGpsVacuum) * bishopMove(quidSquareId, finis, initium, piecediv, myColor, squareId, imagine, iGpsPlenum, iGpsVacuum));
 }
 
-function kingMove(finis, initium, piecediv) { // we are considering the end gps as empty
+function kingMove(finis, initium, piecediv, castle) { // we are considering the end gps as empty
    finis = finis || tango.end;
    initium = initium || tango.origin;
    piecediv = piecediv || tango.piece;
+   castle = castle || false;
    var legal = false, exitCode = 0;
 
    // first check if the square is reachable
@@ -643,12 +645,66 @@ function kingMove(finis, initium, piecediv) { // we are considering the end gps 
       exitCode = 5; // 5 to maintain unity
       return(exitCode);
    }
+
+   // moving by one
    surroundChecker(initium, piecediv);
    for (var x in surroundingGps) {
       if (finis === surroundingGps[x]) {
          legal = true;
+         // if there's a piece there of my color
+         if (ubi(finis).firstChild && ubi(finis).firstChild.firstChild.id === piecediv.firstChild.id) {
+            exitCode = 2;
+            if (theConsole === ON) { // when using attackMap we want to show no console
+               console.log("Error code: " + exitCode + ".\nWe cannot capture a friendly piece");         
+            }
+            return(exitCode);
+         }
       }
    }
+
+   // castling
+   if (castle) { // to avoid this code to run on hypothetical moves
+      var opColorNum = players.colorNum[opColor],
+      myColorNum = players.colorNum[myColor];
+      if (players.kcastle[myColorNum]) { // if castle rights are true
+         attackMap();
+         if (myColor === "white" && finis === "g1" && players.rcastle.h1) {
+            if (ubi("f1").firstChild === null && ubi("g1").firstChild === null // if empty & not attacked
+            && !players.attacks[opColorNum]["f1"] && !players.attacks[opColorNum]["g1"]) {
+               players.rcastle.h1 = false; // we can no longer castle
+               legal = true;
+               exitCode = -1; // we want to avoid castling move if check
+            }
+         } else if (myColor === "white" && finis === "c1" && players.rcastle.a1) {
+            if (ubi("d1").firstChild === null && ubi("c1").firstChild === null
+            && ubi("b1").firstChild === null && !players.attacks[opColorNum]["d1"] // if empty & not attacked
+            && !players.attacks[opColorNum]["c1"] && !players.attacks[opColorNum]["b1"]) {
+               players.rcastle.a1 = false; // we can no longer castle
+               legal = true;
+               exitCode = -1; // we want to avoid castling move if check
+            }
+         } else if (myColor === "red" && finis === "g8" && players.rcastle.h8) {
+            if (ubi("f8").firstChild === null && ubi("g8").firstChild === null // if empty & not attacked
+            && !players.attacks[opColorNum]["f8"] && !players.attacks[opColorNum]["g8"]) {
+               players.rcastle.h8 = false; // we can no longer castle
+               legal = true;
+               exitCode = -1; // we want to avoid castling move if check
+            }
+         } else if (myColor === "red" && finis === "c8" && players.rcastle.a8) {
+            if (ubi("d8").firstChild === null && ubi("c8").firstChild === null
+            && ubi("b8").firstChild === null && !players.attacks[opColorNum]["d8"] // if empty & not attacked
+            && !players.attacks[opColorNum]["c8"] && !players.attacks[opColorNum]["b8"]) {
+               players.rcastle.a8 = false; // we can no longer castle
+               legal = true;
+               exitCode = -1; // we want to avoid castling move if check
+            }
+         }
+
+         legal = true;
+         exitCode = -1; // we want to avoid castling move if check
+      }
+   }
+
    if (legal === false) {
       exitCode = 1;
       if (theConsole === ON) { // when using attackMap we want to show no console
@@ -656,6 +712,7 @@ function kingMove(finis, initium, piecediv) { // we are considering the end gps 
       }
       return(exitCode);
    } // else
+   players.kcastle[players.colorNum[myColor]] = false; // we can no longer castle
    return(exitCode);
 }
 
@@ -723,50 +780,20 @@ function relinquo(ev) { // drop function
       mySquareId = Number(ubi(tango.origin).getAttribute("square-id"));
       newSquareId = Number(ubi(tango.end).getAttribute("square-id"));
 
-      var myPiece = tango.piece.id; // for instance "pawn"
-      if (myPiece === pawn.s) {
-         if (pawnMove() !== 0) {
-            if (theConsole === ON) { // when using attackMap we want to show no console
-               console.log("Intended " + pawn.s + " move ilegal.");               
-            }
-            return(1);
-         };
-      } else if (myPiece === king.s) {
-         if (kingMove() !== 0) {
-            if (theConsole === ON) { // when using attackMap we want to show no console
-               console.log("Intended " + king.s + " move ilegal.");               
-            }
-            return(1);
-         };
-      } else if (myPiece === rook.s) {
-         if (rookMove() !== 0) {
-            if (theConsole === ON) { // when using attackMap we want to show no console
-               console.log("Intended " + rook.s + " move ilegal.");               
-            }
-            return(1);
+      var specialMove = 0, // castle and promoting
+      myPiece = tango.piece.id; // for instance "pawn"
+      
+      let x = window[myPiece].move(tango.end, tango.origin, 2, newSquareId, tango.piece, tango.color, mySquareId);
+      if (x > 0) {
+         if (theConsole === ON) { // when using attackMap we want to show no console
+            console.log("Intended " + myPiece + " move ilegal.");               
          }
-      } else if (myPiece === knight.s) {
-         if (knightMove() !== 0) {
-            if (theConsole === ON) { // when using attackMap we want to show no console
-               console.log("Intended " + knight.s + " move ilegal.");               
-            }
-            return(1);
-         }
-      } else if (myPiece === bishop.s) {
-         if (bishopMove(newSquareId) !== 0) {
-            if (theConsole === ON) { // when using attackMap we want to show no console
-               console.log("Intended " + bishop.s + " move ilegal.");               
-            }
-            return(1);
-         }
-      } else if (myPiece === queen.s) {
-         if (queenMove(newSquareId) !== 0) {
-            if (theConsole === ON) { // when using attackMap we want to show no console
-               console.log("Intended " + queen.s + " move ilegal.");               
-            }
-            return(1);
-         }
+         return(1);
+      } else if (myPiece === king.s && x === -1) {
+         successfulMove(myPiece, newSquareId, ); // castle
+         return(-1);
       }
+      
       successfulMove(myPiece, newSquareId);
    } // else no move is allowed
    
@@ -825,7 +852,7 @@ function attackMap(imagine, iGpsPlenum, iGpsVacuum, iPiece, iColor) { // castle.
             var otherSquare = ubi(board[j].n); // the div of "a4"
             var otherSquareId = Number(otherSquare.getAttribute("square-id"));
             var otherGps = otherSquare.getAttribute("gps"); // "a4"
-            if (window[thisPieceName].move(otherGps, thisGps, true, otherSquareId, thisPiece, thisColor, squareId, imagine, iGpsPlenum, iGpsVacuum) === 0) { // knight.move(...)
+            if (window[thisPieceName].move(otherGps, thisGps, 1, otherSquareId, thisPiece, thisColor, squareId, imagine, iGpsPlenum, iGpsVacuum) === 0) { // knight.move(...)
                players.attacks[players.colorNum[thisColor]][otherGps] = true; // this piece attacks the end
             }
          }
@@ -834,7 +861,6 @@ function attackMap(imagine, iGpsPlenum, iGpsVacuum, iPiece, iColor) { // castle.
    iSquare.innerHTML = "";
    theConsole = ON;
 } // it works detecting them in the middle squares (in between) and detects them as imaginary pieces
-
 
 function isAttacked(myPiece, finis, initium, myColor) {
    var opColorNum = players.colorNum[opColor]; 
@@ -854,11 +880,61 @@ function isAttacked(myPiece, finis, initium, myColor) {
       // discovery check? block check? did I get out of check?
       // either he moves or he doesn't
       var myKingGps = players.kings[players.colorNum[myColor]];
-      if (players.attacks[opColorNum][myKingGps] === true) { // I cannot go into check
+      if (players.attacks[opColorNum][myKingGps]) { // I cannot go into check
+         attackMap(); // reset
          return (2);
       }
+      attackMap(); // reset
       return(0); // no threat
    }
+}
+
+function checkmate() {
+   isAttacked();
+   var myKingGps = players.kings[players.colorNum[myColor]],
+   opColorNum = players.colorNum[opColor]; 
+   if (players.attacks[opColorNum][myKingGps]) { // if the new color is attacked
+      var legalMoves = 0;
+      for (var i = 0; i < board.length; i++) {
+         // first let's reset
+         var thisPiece = null, thisPieceName = null, thisColor = null, thisGps = null, squareId = null;
+         var thisSquare = ubi(board[i].n); // for instance, the div of the square of "a8"
+         squareId = Number(thisSquare.getAttribute("square-id"));
+         thisGps = thisSquare.getAttribute("gps");
+         if (thisSquare.firstChild) { // if there's a piece
+            thisPiece = thisSquare.firstChild; // piecediv
+            thisPieceName = thisPiece.id;
+            thisColor = thisPiece.firstChild.id;     
+            if (thisColor === myColor) {
+               for (var j = 0; j < board.length; j++) {
+                  var otherSquare = ubi(board[j].n); // the div of "a4"
+                  var otherSquareId = Number(otherSquare.getAttribute("square-id"));
+                  var otherGps = otherSquare.getAttribute("gps"); // "a4"
+                  theConsole = OFF; // each time we run isAttacked() the console is on at the end
+                  // we don't use imaginary moves here because we are only looking for real moves to get out of check
+                  if (window[thisPieceName].move(otherGps, thisGps, 1, otherSquareId, thisPiece, thisColor, squareId) === 0) { // knight.move(...)
+                     if (isAttacked(window[thisPieceName], otherGps, thisGps, myColor) === 0)  { 
+                        // we should check if it's a legal move
+                        legalMoves++;
+                        console.log("thisPieceName: " + thisPieceName + " otherGps: " + otherGps + " thisGps: " + thisGps + " otherSquareId: " + otherSquareId + " thisPiece: " + thisPiece + " thisColor: " + thisColor + " squareId: " + squareId);
+                     }
+                     
+                  }
+               }
+            }
+         }
+      }
+      console.log("Number of legal moves = " + legalMoves + ".");
+      theConsole = ON;
+      if (legalMoves === 0) {
+         players.score[currentPlayer] = 0;
+         players.score[opColorNum] = 1;
+         checkmated = true;
+         alert(opColor + "wins by checkmate");
+         return(0); // checkmate
+      }
+   }
+   return(1);
 }
 
 function quaero(attr, all) {
@@ -1032,8 +1108,26 @@ fileInput.addEventListener("change",
 
 omnia.forEach(
    function (square) {
-      square.addEventListener("dragstart", sumo);
-      square.addEventListener("dragover", superteneo);
-      square.addEventListener("drop", relinquo);
+      square.addEventListener("dragstart", 
+         function(ev) {
+            if (!checkmated) {
+               // console.log("test sumo");
+               sumo(ev);
+            }
+         });
+      square.addEventListener("dragover", 
+         function(ev) {
+            if (!checkmated) {
+               // console.log("test superteneo");
+               superteneo(ev);
+            }
+         });
+      square.addEventListener("drop", 
+         function(ev) {
+            if (!checkmated) {
+               // console.log("test relinquo");
+               relinquo(ev);
+            }
+         });
    }
 );
