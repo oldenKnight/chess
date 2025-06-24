@@ -7,20 +7,28 @@ function Piece(nomen, value, limited, gps, diag, x, y) { // the last three are o
    this.gps = gps || "";
    this.s = nomen; // string
    this.value = 0;
-   this.move = function(finis, initium, capture, quidSquareId, piecediv, myColor, squareId) {
-      capture = capture || false;
+   this.move = function(finis, initium, special, quidSquareId, piecediv, myColor, squareId, imagine, iGpsPlenum, iGpsVacuum) {
+      imagine = imagine || false; // this let's me map hypotetical moves
+      iGpsPlenum = iGpsPlenum || null; // the color doesnt matter
+      iGpsVacuum= iGpsVacuum || null;
+      var capture = false, castle = false;
+      if (special === 1) {
+         capture = true;
+      } else if (special === 2) {
+         castle = true;
+      }
       if (this.s === "king") {
-         return kingMove(finis, initium, piecediv);
+         return kingMove(finis, initium, piecediv, castle);
       } else if (this.s === "queen") {
-         return queenMove(quidSquareId, finis, initium, piecediv, myColor, squareId);
+         return queenMove(quidSquareId, finis, initium, piecediv, myColor, squareId, imagine, iGpsPlenum, iGpsVacuum);
       } else if (this.s === "rook") {
-         return rookMove(finis, initium, piecediv, myColor);
+         return rookMove(finis, initium, piecediv, myColor, imagine, iGpsPlenum, iGpsVacuum);
       } else if (this.s === "knight") {
          return knightMove(finis, initium, myColor);
       } else if (this.s === "bishop") {
-         return bishopMove(quidSquareId, finis, initium, piecediv, myColor, squareId);
+         return bishopMove(quidSquareId, finis, initium, piecediv, myColor, squareId, imagine, iGpsPlenum, iGpsVacuum);
       } else if (this.s === "pawn") {
-         return pawnMove(capture, finis, initium, myColor);
+         return pawnMove(capture, finis, initium, myColor, imagine, iGpsPlenum, iGpsVacuum);
       }
    };
    this.attacks = [];

@@ -6,14 +6,24 @@
       <link rel="stylesheet" href="styles.css">
    </head>
    <body>
+      <div class="modal" id="modal">
+         <div class="modal-inner">
+            <button id="knight-volo">Knight</button>
+            <button id="bishop-volo">Bishop</button>
+            <button id="rook-volo">Rook</button>
+            <button id="queen-volo">Queen</button>
+         </div>
+      </div>
+
       <div id="gameboard"></div>
       <p id="turn">It is <span id="player"></span>'s turn.</p>
       <p id="info-display"></p>
       <input type="button" value="Save game" id="savegame" onclick="saveGame();" />
       <input type="file" value="Load Game" id="loadgame" />
       <div id="preview"></div>
+      <div id="iPieceSquare"></div>
       
       <script src="piecesalt.js"></script>
-      <script src="app-v3.js"></script> 
+      <script src="app-v8.js"></script> 
    </body>
 </html>
